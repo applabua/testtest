@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ChatGPT в одном файле</title>
+  <style>
+    /* базовый стиль — подгоняйте под ваш дизайн */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 80vh;
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+    .message.user {
+      text-align: right;
+      color: #333;
+    }
+    .message.assistant {
+      text-align: left;
+      color: #007bff;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+    .input-area input {
+      flex: 1;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+    }
+    .input-area button {
+      border: none;
+      background: #007bff;
+      color: #fff;
+      padding: 0 20px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background .2s;
+    }
+    .input-area button:disabled {
+      background: #999;
+      cursor: default;
+    }
+    .input-area button:hover:not(:disabled) {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <input type="text" id="input" placeholder="Напишите сообщение..." autocomplete="off" />
+      <button id="send">Отправить</button>
+    </div>
+  </div>
+
+  <script>
+    // ВАЖНО: без API-ключа chat не работает
+    const apiKey = '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';
+
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('input');
+    const sendEl     = document.getElementById('send');
+
+    // системное сообщение, можно настроить под себя
+    const conversation = [
+      { role: 'system', content: 'Вы — помощник на базе GPT.' }
+    ];
+
+    function appendMessage(role, text) {
+      const msg = document.createElement('div');
+      msg.className = `message ${role}`;
+      msg.textContent = text;
+      messagesEl.appendChild(msg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const userText = inputEl.value.trim();
+      if (!userText) return;
+      appendMessage('user', userText);
+      conversation.push({ role: 'user', content: userText });
+      inputEl.value = '';
+      sendEl.disabled = true;
+
+      try {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: conversation
+          })
+        });
+        const data = await res.json();
+        const assistantText = data.choices[0].message.content;
+        conversation.push({ role: 'assistant', content: assistantText });
+        appendMessage('assistant', assistantText);
+      } catch (err) {
+        console.error(err);
+        appendMessage('assistant', 'Ошибка подключения к OpenAI API');
+      } finally {
+        sendEl.disabled = false;
+      }
+    }
+
+    sendEl.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+
+</body>
+</html>
